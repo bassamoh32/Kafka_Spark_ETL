@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.8.1
+    container_name: zookeeper_local
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    networks:
+      - test
+
+  kafka:
+    image: bitnami/kafka:3.6.1
+    container_name: kafka_local
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper_local:2181
+      - KAFKA_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka_local:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    networks:
+      - test
+    healthcheck:
+      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "kafka_local:9092", "--list"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master 
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "netstat -tuln | grep 7077"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - test
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    depends_on:
+      - spark-master
+    ports:
+      - "8081:8081"
+    networks:
+      - test
+  kafka-producer:
+    build:
+      context: ./kafka
+      dockerfile: Dockerfile
+    container_name: kafka_producer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./kafka:/app
+    networks:
+      - test
+  spark-consumer:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: spark_consumer
+    depends_on:
+      - kafka
+      - spark-master
+      - spark-worker
+    volumes:
+    - ./spark:/app
+    networks:
+      - test
+
+networks:
+  test:
