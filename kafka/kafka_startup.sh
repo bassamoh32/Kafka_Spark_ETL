@@ -7,7 +7,7 @@ until nc -z zookeeper_local 2181; do
 done 
 
 # wait for kafka to start
-until nc -z kafka_local 9092; do
+until nc -z kafka 9092; do
     echo "wait for kafka to start ..."
     sleep 3
 done
