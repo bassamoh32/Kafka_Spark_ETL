@@ -4,7 +4,7 @@
 This project ingests real-time cryptocurrency market data from the CoinGecko API and processes it through a modern streaming data pipeline. It uses Kafka as a message broker, Spark Structured Streaming for data transformation and schema enforcement, and Cassandra for scalable storage of historical market data. The architecture is designed for fault tolerance and near real-time analytics, making it suitable for dashboards, monitoring systems, and machine learning use cases. The entire pipeline is containerized and orchestrated with Docker Compose for easy deployment and reproducibility.
 
 ## Architecture 
-*(You can insert an architecture diagram here for better visualization)*
+![System design](system_design.png)
 
 ### Components
 
